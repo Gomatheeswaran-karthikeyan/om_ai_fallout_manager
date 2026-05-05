@@ -1,0 +1,12 @@
+fastapi==0.136.1
+uvicorn[standard]==0.46.0
+pydantic==2.13.3
+pydantic-settings==2.14.0
+sqlalchemy[asyncio]==2.0.49
+asyncpg==0.31.0
+python-dotenv==1.2.2
+
+# LLM providers – install only what you need
+openai==2.33.0              # required for Groq and Ollama (OpenAI-compatible)
+anthropic==0.97.0           # only needed if LLM_PROVIDER=anthropic
+google-generativeai==0.8.6  # only needed if LLM_PROVIDER=gemini
