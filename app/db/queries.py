@@ -49,6 +49,48 @@ def _kw_score_expr(keywords: list[str], column: str, params: dict, prefix: str) 
 
 # ── Meta queries ───────────────────────────────────────────────────────────────
 
+# async def fetch_exact_meta(
+#     session: AsyncSession,
+#     error_code: Optional[str] = None,
+#     network_type: Optional[str] = None,
+#     order_action: Optional[str] = None,
+#     lob: Optional[str] = None,
+# ) -> Optional[FalloutMeta]:
+#     """
+#     Exact meta lookup:
+#       1. Must match error_code (if provided and non-UNKNOWN).
+#       2. Among matches, rank by how many of network_type / order_action / lob also match.
+#       3. Returns the single best row, or None if no error_code match exists.
+#     """
+#     if not error_code or error_code.upper() == "UNKNOWN":
+#         return None
+
+#     params: dict = {
+#         "error_code": error_code.upper(),
+#         "network_type": network_type,
+#         "order_action": order_action,
+#         "lob": lob,
+#     }
+
+#     sql = text(
+#         f"SELECT {_META_COLS},"
+#         " (CASE WHEN UPPER(error_code) = UPPER(:error_code) THEN 10 ELSE 0 END"
+#         " + CASE WHEN network_type IS NOT DISTINCT FROM :network_type THEN 3 ELSE 0 END"
+#         " + CASE WHEN order_action IS NOT DISTINCT FROM :order_action THEN 2 ELSE 0 END"
+#         " + CASE WHEN lob IS NOT DISTINCT FROM :lob THEN 1 ELSE 0 END"
+#         " ) AS match_score"
+#         f" FROM {_META_TABLE}"
+#         " WHERE UPPER(error_code) = UPPER(:error_code)"
+#         " ORDER BY match_score DESC"
+#         " LIMIT 1"
+#     )
+#     result = await session.execute(sql, params)
+#     row = result.mappings().first()
+#     if row is None:
+#         return None
+#     data = {k: v for k, v in row.items() if k != "match_score"}
+#     return FalloutMeta(**data)
+
 async def fetch_exact_meta(
     session: AsyncSession,
     error_code: Optional[str] = None,
@@ -56,16 +98,11 @@ async def fetch_exact_meta(
     order_action: Optional[str] = None,
     lob: Optional[str] = None,
 ) -> Optional[FalloutMeta]:
-    """
-    Exact meta lookup:
-      1. Must match error_code (if provided and non-UNKNOWN).
-      2. Among matches, rank by how many of network_type / order_action / lob also match.
-      3. Returns the single best row, or None if no error_code match exists.
-    """
+
     if not error_code or error_code.upper() == "UNKNOWN":
         return None
 
-    params: dict = {
+    params = {
         "error_code": error_code.upper(),
         "network_type": network_type,
         "order_action": order_action,
@@ -73,24 +110,25 @@ async def fetch_exact_meta(
     }
 
     sql = text(
-        f"SELECT {_META_COLS},"
-        " (CASE WHEN UPPER(error_code) = UPPER(:error_code) THEN 10 ELSE 0 END"
-        " + CASE WHEN network_type IS NOT DISTINCT FROM :network_type THEN 3 ELSE 0 END"
-        " + CASE WHEN order_action IS NOT DISTINCT FROM :order_action THEN 2 ELSE 0 END"
-        " + CASE WHEN lob IS NOT DISTINCT FROM :lob THEN 1 ELSE 0 END"
-        " ) AS match_score"
-        f" FROM {_META_TABLE}"
-        " WHERE UPPER(error_code) = UPPER(:error_code)"
-        " ORDER BY match_score DESC"
-        " LIMIT 1"
+        f"""
+        SELECT {_META_COLS}
+        FROM {_META_TABLE}
+        WHERE UPPER(error_code) = UPPER(:error_code)
+          AND network_type IS NOT DISTINCT FROM :network_type
+          AND order_action IS NOT DISTINCT FROM :order_action
+          AND lob IS NOT DISTINCT FROM :lob
+        LIMIT 1
+        """
     )
-
+    print("META SQL: ", sql)
+    print ("PARAMS: ", params)
     result = await session.execute(sql, params)
     row = result.mappings().first()
-    if row is None:
+
+    if not row:
         return None
-    data = {k: v for k, v in row.items() if k != "match_score"}
-    return FalloutMeta(**data)
+
+    return FalloutMeta(**row)
 
 
 # ── Closed cases queries ───────────────────────────────────────────────────────
@@ -126,8 +164,11 @@ async def fetch_top5_closed(
         " LIMIT 5"
     )
 
+    print("CLOSED CASE SQL:", sql)
+    print ("PARAMS: ", params)
     result = await session.execute(sql, params)
     rows = result.mappings().all()
+    # print("CLOSED CASE DATA: ", rows)
     out = []
     for row in rows:
         if row["match_score"] == 0:

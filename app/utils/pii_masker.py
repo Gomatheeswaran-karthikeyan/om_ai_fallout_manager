@@ -1,6 +1,6 @@
 from __future__ import annotations
 import re
-from typing import Optional
+from typing import Optional, Any, Dict, List
 
 # Fields that should have PII masking applied
 MASKED_KEYS = {"notes", "work_notes", "description", "short_description"}
@@ -64,3 +64,45 @@ def mask_if_sensitive(key: str, value: Optional[str]) -> Optional[str]:
     if key in MASKED_KEYS:
         return mask(value)
     return value
+
+
+SENSITIVE_KEYS = {
+    "customername",
+    "customeremail",
+    "phonenumber",
+    "account",
+    "accountnum",
+    "accountnumber",
+    "street",
+    "address",
+}
+
+
+def mask_value(value: Any) -> Any:
+    if isinstance(value, str):
+        if len(value) <= 4:
+            return "****"
+        return value[:2] + "****" + value[-2:]
+    return "****"
+
+
+def mask_payload(data: Any) -> Any:
+    """
+    Recursively mask sensitive fields in dict/list payloads.
+    """
+    if isinstance(data, dict):
+        masked = {}
+        for key, value in data.items():
+            key_lower = key.lower()
+
+            if key_lower in SENSITIVE_KEYS:
+                masked[key] = mask_value(value)
+            else:
+                masked[key] = mask_payload(value)
+
+        return masked
+
+    elif isinstance(data, list):
+        return [mask_payload(item) for item in data]
+
+    return data

@@ -43,8 +43,8 @@ class ClosedCase(BaseModel):
 class AISuggestion(BaseModel):
     root_cause: str
     resolution_steps: list[str]
-    escalation: str
-    prevention: str
+    # escalation: str
+    # prevention: str
 
 
 class FalloutAnalysisResponse(BaseModel):

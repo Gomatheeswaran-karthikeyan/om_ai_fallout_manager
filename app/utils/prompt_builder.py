@@ -4,7 +4,8 @@ from typing import Optional
 
 from app.models.request_model import FalloutRequest, ResponsePayload
 from app.models.response_model import ClosedCase, FalloutMeta
-from app.utils.pii_masker import mask, mask_if_sensitive
+from app.utils.pii_masker import mask, mask_if_sensitive, mask_payload
+import json
 
 
 def parse_description(
@@ -52,7 +53,7 @@ def build_fallout_prompt(
 ) -> str:
     if parsed is None:
         parsed = parse_description(request.description, request.responsePayload)
-
+    print("REQUEST", request)
     # Mask PII only in sensitive free-text fields
     error_reason  = mask_if_sensitive("description", parsed.get("error_reason") or "N/A")
     error_message = mask_if_sensitive("description", parsed.get("error_message") or "N/A")
@@ -73,10 +74,22 @@ def build_fallout_prompt(
     else:
         cc_section = "## Similar Past Closed Cases\nNo similar closed cases found."
 
-    return (
+    masked_request_payload = (
+        mask_payload(request.requestPayload.model_dump())
+        if request.requestPayload else None
+    )
+
+    masked_response_payload = (
+        mask_payload(request.responsePayload.model_dump())
+        if request.responsePayload else None
+    )
+    request_payload_str = json.dumps(masked_request_payload, indent=2) if masked_request_payload else "N/A"
+    response_payload_str = json.dumps(masked_response_payload, indent=2) if masked_response_payload else "N/A"
+    prompt = (
         "You are a senior Order Management Analyst at Brightspeed telecom.\n"
         "Use the past closed cases below to suggest the best resolution.\n"
         "Respond ONLY with a valid JSON object. No markdown, no extra text.\n\n"
+
         "## Incident\n"
         f"Ticket: {request.number} | Order: {request.u_order_number or 'N/A'}\n"
         f"Short Desc: {short_desc} | Network: {request.u_network_type_boss or 'N/A'}\n"
@@ -88,7 +101,36 @@ def build_fallout_prompt(
         f"Error Message: {error_message}\n"
         f"Resolution Notes: {resolution}\n"
         f"Work Notes: {work_notes}\n\n"
+
+        "## Request Payload (Masked)\n"
+        f"{request_payload_str}\n\n"
+
+        "## Response Payload (Masked)\n"
+        f"{response_payload_str}\n\n"
+
         f"{cc_section}\n\n"
-        "Return this JSON:\n"
-        '{"root_cause":"string","resolution_steps":["step1","step2","step3"],"escalation":"string","prevention":"string"}'
+
+        "Return like this JSON:\n"
+        '{"root_cause":"string","resolution_steps":["step1","step2","step3"]}'
     )
+    print ("PROMPT TO LLM: ", prompt)
+    return prompt
+    # (
+    #     "You are a senior Order Management Analyst at Brightspeed telecom.\n"
+    #     "Use the past closed cases below to suggest the best resolution.\n"
+    #     "Respond ONLY with a valid JSON object. No markdown, no extra text.\n\n"
+    #     "## Incident\n"
+    #     f"Ticket: {request.number} | Order: {request.u_order_number or 'N/A'}\n"
+    #     f"Short Desc: {short_desc} | Network: {request.u_network_type_boss or 'N/A'}\n"
+    #     f"Action: {request.u_order_action or 'N/A'} | LOB: {request.u_lob or 'N/A'}\n"
+    #     f"Group: {request.assignment_group or 'N/A'} / {request.u_sub_assignment_group or 'N/A'}\n"
+    #     f"Category: {request.u_parent_categories or 'N/A'} > {request.u_sub_categories or 'N/A'}\n"
+    #     f"Error Code: {parsed.get('error_code') or 'N/A'}\n"
+    #     f"Error Reason: {error_reason}\n"
+    #     f"Error Message: {error_message}\n"
+    #     f"Resolution Notes: {resolution}\n"
+    #     f"Work Notes: {work_notes}\n\n"
+    #     f"{cc_section}\n\n"
+    #     "Return this JSON:\n"
+    #     '{"root_cause":"string","resolution_steps":["step1","step2","step3"],"escalation":"string","prevention":"string"}'
+    # )

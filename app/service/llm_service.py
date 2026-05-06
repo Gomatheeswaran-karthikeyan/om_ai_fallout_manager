@@ -34,8 +34,8 @@ def _parse_suggestion(raw: str) -> AISuggestion:
         return AISuggestion(
             root_cause=raw.strip(),
             resolution_steps=["See root_cause field for full details."],
-            escalation="Unable to parse structured response.",
-            prevention="Unable to parse structured response.",
+            # escalation="Unable to parse structured response.",
+            # prevention="Unable to parse structured response.",
         )
 
     steps = data.get("resolution_steps", [])
@@ -51,8 +51,8 @@ def _parse_suggestion(raw: str) -> AISuggestion:
     return AISuggestion(
         root_cause=_to_str(data.get("root_cause", "")),
         resolution_steps=steps,
-        escalation=_to_str(data.get("escalation", "")),
-        prevention=_to_str(data.get("prevention", "")),
+        # escalation=_to_str(data.get("escalation", "")),
+        # prevention=_to_str(data.get("prevention", "")),
     )
 
 
