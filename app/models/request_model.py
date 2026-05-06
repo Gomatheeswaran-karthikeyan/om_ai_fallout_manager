@@ -307,12 +307,19 @@ class FalloutRequest(BaseModel):
     u_resolution_notes: Optional[str] = None
     work_notes: Optional[str] = None
 
-    responsePayload: Optional[ResponsePayload] = Field(
-        None, description="Structured downstream system response with error status"
+    # responsePayload: Optional[ResponsePayload] = Field(
+    #     None, description="Structured downstream system response with error status"
+    # )
+
+    # requestPayload: Optional[RequestPayload] = Field(
+    #     None, description="Original request payload sent to downstream system"
+    # )
+    responsePayload: Optional[Dict[str, Any]] = Field(
+        None, description="Dynamic downstream response payload"
     )
 
-    requestPayload: Optional[RequestPayload] = Field(
-        None, description="Original request payload sent to downstream system"
+    requestPayload: Optional[Dict[str, Any]] = Field(
+        None, description="Dynamic request payload sent to downstream system"
     )
 
 
