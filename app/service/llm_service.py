@@ -1,6 +1,7 @@
 from __future__ import annotations
 import json
 import re
+import httpx
 
 from app.config.settings import settings
 from app.models.response_model import AISuggestion
@@ -90,17 +91,44 @@ async def _call_anthropic(prompt: str) -> str:
 # ── Groq (OpenAI-compatible, free tier) ───────────────────────────────────────
 
 async def _call_groq(prompt: str) -> str:
-    from openai import AsyncOpenAI
-    client = AsyncOpenAI(api_key=settings.groq_api_key, base_url="https://api.groq.com/openai/v1")
-    resp = await client.chat.completions.create(
-        model=settings.groq_model,
-        max_tokens=settings.llm_max_tokens,
-        messages=[
-            {"role": "system", "content": _system_prompt()},
-            {"role": "user", "content": prompt},
-        ],
-    )
-    return resp.choices[0].message.content
+
+    url = "https://api.groq.com/openai/v1/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {settings.groq_api_key}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": settings.groq_model,
+        "messages": [
+            {
+                "role": "system",
+                "content": _system_prompt()
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    }
+
+    async with httpx.AsyncClient(
+            timeout=60.0,
+            verify=False   # TEMP FIX
+    ) as client:
+
+        response = await client.post(
+            url,
+            headers=headers,
+            json=payload
+        )
+
+        response.raise_for_status()
+
+        data = response.json()
+
+        return data["choices"][0]["message"]["content"]
 
 
 # ── Google Gemini (free tier) ─────────────────────────────────────────────────
