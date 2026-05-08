@@ -33,7 +33,7 @@ def _parse_suggestion(raw: str) -> AISuggestion:
     except json.JSONDecodeError:
         # Fallback: wrap the raw text so the response still has structure
         return AISuggestion(
-            root_cause=raw.strip(),
+            # root_cause=raw.strip(),
             resolution_steps=["See root_cause field for full details."],
             # escalation="Unable to parse structured response.",
             # prevention="Unable to parse structured response.",
@@ -50,7 +50,7 @@ def _parse_suggestion(raw: str) -> AISuggestion:
         ]
 
     return AISuggestion(
-        root_cause=_to_str(data.get("root_cause", "")),
+        # root_cause=_to_str(data.get("root_cause", "")),
         resolution_steps=steps,
         # escalation=_to_str(data.get("escalation", "")),
         # prevention=_to_str(data.get("prevention", "")),

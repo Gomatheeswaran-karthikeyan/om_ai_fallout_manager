@@ -41,7 +41,7 @@ class ClosedCase(BaseModel):
 
 
 class AISuggestion(BaseModel):
-    root_cause: str
+    # root_cause: str
     resolution_steps: list[str]
     # escalation: str
     # prevention: str

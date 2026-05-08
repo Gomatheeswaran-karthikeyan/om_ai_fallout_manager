@@ -163,7 +163,7 @@ def build_fallout_prompt(
         f"{cc_section}\n\n"
 
         "Return like this JSON:\n"
-        '{"root_cause":"string","resolution_steps":["step1","step2","step3"]}'
+        '{"resolution_steps":["step1","step2","step3"]}'
     )
     print ("PROMPT TO LLM: ", prompt)
     return prompt
